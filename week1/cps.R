@@ -20,5 +20,12 @@ getm = function(file){
 
 source("http://gsubfn.googlecode.com/svn/trunk/R/list.R")
 
+
 list[CPS,MAC,CC] = lapply(files,getm)
 
+CPS = merge(CPS, MAC, by.x="MetroAreaCode", by.y="Code", all.x=TRUE)
+CPS = merge(CPS, CC, by.x="CountryOfBirthCode", by.y="Code", all.x=TRUE)
+
+
+tt = tapply(CPS$Country!="United States",CPS$MetroArea,mean,na.rm=TRUE)
+print(tt[["New York-Northern New Jersey-Long Island, NY-NJ-PA" ]])
