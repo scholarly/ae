@@ -28,17 +28,13 @@ test$raceeth = relevel(test$raceeth,"White")
 
 m1 = lm( readingScore ~ . ,data=train)
 
-m2 = step(m1)
+
 
 rmse = function(res) {sqrt(mean(res^2))}
 rsq = function(pred,act,mu) {1 - (sum((act-pred)^2)/sum((act-mu)^2))}
 
+mu = mean(train$readingScore)
 
 p1 = predict(m1,test)
-p2 = predict(m2,test)
-
-mu = mean(train$Temp)
-
-print(rsq(p1,test$Temp,mu))
-print(rsq(p2,test$Temp,mu))
-print(rsq(p3,test$Temp,mu))
+print(sum((test$readingScore-mu)^2))
+print(rsq(p1,test$readingScore,mu))
