@@ -22,7 +22,7 @@ QC=getm(files)
 
 library(caTools)
 set.seed(1000)
-split = sample.split(QC$PoorCare,SplitRatio=.65)
+split = sample.split(QC$TenYearCHD,SplitRatio=.65)
 train = subset(QC,split)
 test = subset(QC,!split)
 
