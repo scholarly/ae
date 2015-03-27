@@ -82,8 +82,19 @@ print(table(playoffs$WS))
 # sapply(all,function(x) {print(summary(x))})
 
 
-dumb = names(playoffs)
-dumber = dumb[-c(1, 10, 12, 13, 17)]
+
+indepvars = names(playoffs)[-c(1, 10, 12, 13, 17)]
+nvars = length(indepvars)
+kseq= 1:nvars
+df = data.frame(vars=rep(NA,nvars),aic=rep(NA,nvars),model=rep(NA,nvars))
+j = 0
+for(k in kseq){
+   df[k,"vars"]=indepvars[k]
+   model = glm(formula(paste("WS~",indepvars[k])),data=playoffs,family="binomial")
+   df[k,"model"]=model
+   df[k,"aic"]=model$aic
+}
+
 goodvars = c("Year","RA","RankSeason","NumCompetitors")
 
 library(gtools)
