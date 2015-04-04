@@ -1,11 +1,11 @@
 ---
-title: "Health Claims"
+title: "Trees"
 author: "Terrel Shumway"
 date: "03/30/2015"
 output: html_document
 ---
 
-First, we download and read the file `stevens.csv`...
+First, we download and read the file `ClaimsData.csv`...
 
 ```{r}
 
@@ -39,20 +39,31 @@ e = function( outcome,prediction){
                        byrow=T,nrow=5)
 
   penalty = sum(as.matrix(conf)*PenaltyMatrix)/n
+  print(accuracy)
+  print(penalty)
   c(accuracy=accuracy,penalty=penalty)
 }
 
 e(Test$bucket2009,Test$bucket2008)
-e(Test$bucket2009,seq(1,1,length.out=nrow(Test)))
-?seq
+
 ```
 
 ## CART
 
 All of our models are going to use the same independent variables. lets set this once.
 ```{r}
-stformula = Reverse ~ Circuit + Issue + Petitioner + Respondent + LowerCourt + Unconst
+stformula = bucket2009 ~ age + arthritis + alzheimers + 
+    cancer + copd + depression + diabetes + heart.failure +
+    ihd + kidney + osteoporosis + stroke +
+    bucket2008 + reimbursement2008 
 
+library(rpart)
+library(rpart.plot)
+Tree = rpart( stformula, data=Train, method="class",cp=0.00005,parms=list(loss=PenaltyMatrix))
+#prp(Tree)
+p1 = predict(Tree,newdata=Test,type="class")
+conf=table(Test$bucket2009,p1)
+conf
 ```
 
 
