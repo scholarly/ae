@@ -5,31 +5,12 @@ date: "04/02/2015"
 output: html_document
 ---
 
-First, we download and read the file `stevens.csv`...
+First, we download and read the file `ClaimsData.csv`...
 
 ```{r}
 
-baseurl = "https://courses.edx.org/c4x/MITx/15.071x_2/asset/"
 
-get_data = function(url,local){
-  if(!file.exists(local)){
-    download.file(url,local,"curl")
-  }
-  read.csv(local)
-}
-
-data_dir = function(fname){
-  fname
-  #paste("data",fname,sep="/")
-}
-
-getm = function(file){
-  get_data(paste(baseurl,file,sep=""),data_dir(file))
-}
-
-
-claims = getm("ClaimsData.csv.zip")
-#stevens$Reverse = as.factor(stevens$Reverse)
+claims = read.csv("ClaimsData.csv")
 str(claims)
 
 ```
@@ -39,10 +20,31 @@ split the data into Train and Test sets...
 ```{r}
 #install.packages("caTools")
 library(caTools)
-set.seed(3000)
-spl = sample.split(stevens$Reverse,SplitRatio=0.7)
-Train = subset(stevens,spl)
-Test = subset(stevens,!spl)
+set.seed(88)
+spl = sample.split(claims$bucket2009,SplitRatio=0.6)
+Train = subset(claims,spl)
+Test = subset(claims,!spl)
+
+sapply(Train[c("age","diabetes")],mean)
+
+e = function( outcome,prediction){
+  conf = table(outcome,prediction)
+  n = nrow(outcome)
+  accuracy = (conf[1,1]+conf[2,2]+conf[3,3]+conf[4,4]+conf[5,5])/n
+  PenaltyMatrix = matrix(c(0,1,2,3,4,
+                         2,0,1,2,3,
+                         4,2,0,1,2,
+                         6,4,2,0,1,
+                         8,6,4,2,0),
+                       byrow=T,nrow=5)
+
+  penalty = sum(as.matrix(conf)*PenaltyMatrix)/n
+  print(accuracy)
+  print(penalty)
+  c(accuracy=accuracy,penalty=penalty)
+}
+
+e(Test$bucket2009,Test$bucket2008)
 
 ```
 
@@ -50,8 +52,18 @@ Test = subset(stevens,!spl)
 
 All of our models are going to use the same independent variables. lets set this once.
 ```{r}
-stformula = Reverse ~ Circuit + Issue + Petitioner + Respondent + LowerCourt + Unconst
+stformula = bucket2009 ~ age + arthritis + alzheimers + 
+    cancer + copd + depression + diabetes + heart.failure +
+    ihd + kidney + osteoporosis + stroke +
+    bucket2008 + reimbursement2008 
 
+library(rpart)
+library(rpart.plot)
+Tree = rpart( stformula, data=Train, method="class",cp=0.00005,parms=list(loss=PenaltyMatrix))
+#prp(Tree)
+p1 = predict(Tree,newdata=Test,type="class")
+conf=table(Test$bucket2009,p1)
+conf
 ```
 
 
