@@ -1,0 +1,183 @@
+---
+title: "D2Hawkeye Claims Modeling"
+author: "Terrel Shumway"
+date: "04/02/2015"
+output: html_document
+---
+
+First, we download and read the file `stevens.csv`...
+
+```{r}
+
+baseurl = "https://courses.edx.org/c4x/MITx/15.071x_2/asset/"
+
+get_data = function(url,local){
+  if(!file.exists(local)){
+    download.file(url,local,"curl")
+  }
+  read.csv(local)
+}
+
+data_dir = function(fname){
+  fname
+  #paste("data",fname,sep="/")
+}
+
+getm = function(file){
+  get_data(paste(baseurl,file,sep=""),data_dir(file))
+}
+
+
+claims = getm("ClaimsData.csv.zip")
+#stevens$Reverse = as.factor(stevens$Reverse)
+str(claims)
+
+```
+
+split the data into Train and Test sets...
+
+```{r}
+#install.packages("caTools")
+library(caTools)
+set.seed(3000)
+spl = sample.split(stevens$Reverse,SplitRatio=0.7)
+Train = subset(stevens,spl)
+Test = subset(stevens,!spl)
+
+```
+
+## CART
+
+All of our models are going to use the same independent variables. lets set this once.
+```{r}
+stformula = Reverse ~ Circuit + Issue + Petitioner + Respondent + LowerCourt + Unconst
+
+```
+
+
+Now, we are ready to build our CART model. First we need to install and load the packages rpart and rpart.plot
+
+```{r}
+#install.packages("rpart")
+library(rpart)
+#install.packages("rpart.plot")
+library(rpart.plot)
+
+
+
+st = rpart( stformula, 
+            data=Train,
+            method="class", minbucket=25)
+
+prp(st)
+```
+
+Now, let's see how well we did:
+
+```{r}
+p1 = predict(st, newdata=Test, type="class")
+conf = table(Test$Reverse,p1)
+accuracy = (conf[1]+conf[4])/nrow(Test)
+print(conf)
+```
+
+The accuracy is `r accuracy`.
+
+```{r}
+library(ROCR)
+p2 = predict(st,newdata=Test)
+pred = prediction(p2[,2],Test$Reverse)
+perf = performance(pred,"tpr","fpr")
+plot(perf)
+auc = as.numeric(performance(pred,"auc")@y.values)
+```
+
+The area under this curve is `r auc`.
+
+If we increase and decrease the `minbucket` parameter
+
+```{r echo=FALSE}
+csplits = function(x){x$cptable[nrow(x$cptable),"nsplit"]}
+
+st5 = rpart(stformula, 
+            data=Train,
+            method="class", minbucket=5)
+
+st100 = rpart(stformula, 
+            data=Train,
+            method="class", minbucket=100)
+
+```
+
+we get minbucket=5 -> `r csplits(st5)` and minbucket=100 -> `r csplits(st100)` splits.
+
+## Random Forests
+
+```{r}
+# install.packages("randomForest")
+library(randomForest)
+
+set.seed(100)
+stevensForest = randomForest(stformula, 
+            data=Train,
+            nodesize = 25, ntree = 200)
+
+
+pf = predict(stevensForest, newdata=Test)
+conf = table(Test$Reverse,pf)
+accuracy = (conf[1]+conf[4])/nrow(Test)
+print(conf)
+```
+
+The accuracy is `r accuracy`.
+
+```{r}
+set.seed(200)
+stevensForest = randomForest(stformula, 
+            data=Train,
+            nodesize = 25, ntree = 200)
+
+
+pf = predict(stevensForest, newdata=Test)
+conf = table(Test$Reverse,pf)
+accuracy = (conf[1]+conf[4])/nrow(Test)
+print(conf)
+```
+
+The accuracy is `r accuracy`.
+
+## k-Fold Cross Validation
+
+```{r}
+#install.packages(c("caret","e1071"))
+library(caret)
+library(e1071)
+
+numFolds = trainControl(method="cv",number=10)
+cpGrid = expand.grid(.cp=seq(0.01,0.5,0.01))
+cvmodels = train(stformula, 
+      data=Train,
+      method="rpart",
+      trControl=numFolds,
+      tuneGrid = cpGrid)
+
+bestcp = cvmodels$bestTune
+```
+
+The best value for tuning the CART model is `r bestcp`. We'll use this create the new CART model.
+
+```{r}
+stevensCV = rpart(stformula,data=Train,method="class",cp=bestcp)
+prp(stevensCV)
+```
+
+This model has `r csplits(stevensCV)` split(s).
+
+```{r}
+p1 = predict(stevensCV, newdata=Test, type="class")
+conf = table(Test$Reverse,p1)
+accuracy = (conf[1]+conf[4])/nrow(Test)
+print(conf)
+```
+
+The accuracy is `r accuracy`.
