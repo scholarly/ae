@@ -1,0 +1,132 @@
+---
+title: "Why People Vote"
+author: "Terrel Shumway"
+date: "Monday, April 06, 2015"
+output: html_document
+---
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r}
+dataurl = "https://courses.edx.org/c4x/MITx/15.071x_2/asset/gerber.csv"
+target="gerber.csv"
+
+if(!file.exists(target)){
+  library(downloader)
+  download(dataurl,target)
+}
+gerber = read.csv(target)
+str(gerber)
+```
+## Problem 1.1
+proportion who voted: `r mean(gerber$voting)`
+
+## Problem 1.2
+
+```{r}
+prop=sort(sapply(c("civicduty","hawthorne","self","neighbors", "control"),function(x){mean(subset(gerber,gerber[x]==1)$voting)}))
+print(prop)
+#plot(prop)
+```
+
+## Problem 1.3
+
+```{r}
+form = voting ~ civicduty+hawthorne+self+neighbors
+m1 = glm(form, data = gerber,family="binomial")
+summary(m1)
+```
+
+## Problem 1.4
+```{r}
+p1 = predict(m1,type="response")
+conf = table(gerber$voting,p1>=.3)
+acc = (conf[1,1]+conf[2,2])/nrow(gerber)
+```
+accuracy: `r acc`
+
+## Problem 1.5
+```{r}
+conf = table(gerber$voting,p1>=.5)
+# how to do this automatically
+acc = (conf[1,1]+0)/nrow(gerber)
+```
+accuracy: `r acc`
+
+## Problem 1.6
+```{r}
+library(ROCR)
+pred = prediction(p1,gerber$voting)
+perf = performance(pred,"tpr","fpr")
+plot(perf)
+auc = as.numeric(performance(pred,"auc")@y.values)
+```
+auc: `r auc`
+
+## Problem 2.1
+```{r}
+library(rpart)
+
+mcart = rpart(form,data=gerber)
+summary(mcart)
+library(rpart.plot)
+prp(mcart)
+
+```
+
+## Problems 2.2 and 2.3
+```{r}
+mcart2 = rpart(form,data=gerber,cp=0.0)
+prp(mcart2)
+```
+
+Remember that 'yes' is on the left, not the right.
+
+## Problem 2.4
+```{r}
+mcart3 = rpart(voting ~ civicduty+hawthorne+self+neighbors+sex,data=gerber,cp=0.0)
+prp(mcart3)
+```
+
+## Problem 3.1
+```{r}
+mcart4 = rpart(voting ~ control,data=gerber,cp=0.0)
+mcart5 = rpart(voting ~ control+sex,data=gerber,cp=0.0)
+prp(mcart4,digits=6)
+prp(mcart5,digits=6)
+summary(mcart5)
+c5 = c(0.345818,0.334176,0.302795,0.290456)
+```
+
+
+## Problem 3.3
+
+```{r}
+form = voting ~ sex+control
+m2 = glm(form, data = gerber,family="binomial")
+summary(m2)
+```
+
+## Problem 3.4
+
+```{r}
+Possibilities = data.frame(sex=c(0,0,1,1),control=c(0,1,0,1))
+p2 = predict(m2, newdata=Possibilities, type="response")
+print(abs(c5-p2)[4])
+```
+
+
+## Problem 3.5
+```{r}
+m3 = glm( voting ~ sex+control+sex:control, data = gerber, family="binomial")
+```
+
+## Problem 3.6
+
+```{r}
+p3 = predict(m3, newdata=Possibilities, type="response")
+print(abs(c5-p3)[4])
+
+```

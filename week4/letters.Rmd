@@ -1,0 +1,38 @@
+---
+title: "machine readable"
+author: "Terrel Shumway"
+date: "Monday, April 06, 2015"
+output: html_document
+---
+
+
+```{r}
+dataurl = "https://courses.edx.org/c4x/MITx/15.071x_2/asset/letters_ABPR.csv"
+target="letters_ABPR.csv"
+
+if(!file.exists(target)){
+  library(downloader)
+  download(dataurl,target)
+}
+letters = read.csv(target)
+
+letters$isB = as.factor(letters$letter == "B")
+library(caTools)
+set.seed(1000)
+spl = sample.split(letters$isB,SplitRatio=.5)
+train = subset(letters,spl)
+test = subset(letters,!spl)
+
+```
+## Problem 1.1
+
+Is it a B?
+
+```{r}
+
+conf = table(test$isB,rep(FALSE,nrow(test))) 
+acc = conf[1]/nrow(test)
+```
+accuracy=`r acc`
+
+## Problem 1.2
