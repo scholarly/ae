@@ -1,0 +1,118 @@
+---
+title: "Tweets"
+author: "Terrel Shumway"
+date: "04/11/2015"
+output: html_document
+---
+
+First, we download and read the file `tweets.csv`...
+
+```{r,echo=FALSE}
+
+remote = "https://courses.edx.org/c4x/MITx/15.071x_2/asset/tweets.csv"
+local = "tweets.csv"
+if(!file.exists(local)){
+  download.file(remote,local,"curl")
+}
+tweets = read.csv(local,stringsAsFactors=F)
+str(tweets)
+```
+
+## Preprocess the tweets
+
+```{r}
+
+library(tm)
+library(SnowballC)
+corpus = Corpus(VectorSource(tweets$Tweet))
+corpus = tm_map(corpus,tolower)
+corpus = tm_map(corpus,PlainTextDocument)
+corpus = tm_map(corpus,removePunctuation)
+corpus = tm_map(corpus,removeWords, c("apple",stopwords("english")))
+corpus = tm_map(corpus,stemDocument)
+
+```
+
+## Make the Bag of Words
+
+```{r}
+frequencies = DocumentTermMatrix(corpus)
+inspect(frequencies[1000:1005,505:515])
+
+findFreqTerms(frequencies,lowfreq=20)
+
+sparse = removeSparseTerms(frequencies,0.995)
+tweetSparse = as.data.frame(as.matrix(sparse))
+colnames(tweetSparse) = make.names(colnames(tweetSparse))
+
+```
+
+```{r}
+tweetSparse$Negative = as.factor(tweets$Avg <= -1)
+
+```
+
+## Split into train and test sets
+
+```{r}
+library(caTools)
+set.seed(123)
+split = sample.split(tweetSparse$Negative,SplitRatio=0.7)
+train = subset(tweetSparse,split)
+test = subset(tweetSparse,!split)
+```
+
+## Build a CART model
+
+```{r}
+
+library(rpart)
+library(rpart.plot)
+tweetCart = rpart(Negative~.,data=train,method="class")
+prp(tweetCart)
+
+p1 = predict(tweetCart,newdata=test,type="class")
+c1 = table(test$Negative,p1)
+acc = (c1[1,1]+c1[2,2])/nrow(test)
+
+bl = table(test$Negative)
+bla = bl[1]/nrow(test)
+```
+
+accuracy = `r acc`
+baseline = `r bla`
+
+## Build a Random Forest
+
+```{r}
+library(randomForest)
+set.seed(123)
+tweetRF = randomForest(Negative ~ ., data = train)
+
+```
+
+See how it did
+
+```{r}
+
+p2 = predict(tweetRF,newdata=test)
+c2 = table(test$Negative,p2)
+a2 = (c2[1,1]+c2[2,2])/nrow(test)
+
+```
+
+accuracy of the random forest: `r a2`
+
+## What About a Logistical Regression Model?
+
+```{r}
+m3 = glm(Negative ~.,data=train,family="binomial")
+
+p3 = predict(m3,newdata=test,type="response")
+c3 = table(test$Negative,p3>.05)
+a3 = (c3[1,1]+c3[2,2])/nrow(test)
+c3
+
+```
+
+Accuracy of LRM: `r a3`
