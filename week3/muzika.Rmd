@@ -1,0 +1,121 @@
+---
+title: "Music Hits"
+author: "Terrel Shumway"
+date: "04/14/2015"
+output: html_document
+---
+
+Load the data.
+
+```{r}
+remote = "https://courses.edx.org/c4x/MITx/15.071x_2/asset/songs.csv"
+local = "songs.csv"
+if(!file.exists(local)){
+  library(downloader)
+  download(remote,local)
+}
+songs = read.csv(local)
+```
+
+
+## Understanding the Data
+
+```{r}
+byyear = table(songs$year)
+```
+Problem 1.1: `r byyear["2010"]`
+
+
+
+```{r}
+jackson = subset(songs,artistname=="Michael Jackson")
+```
+Problem 1.2: `r nrow(jackson)`
+
+Problem 1.3:
+```{r,results='asis'}
+knitr::kable(subset(jackson,jackson$Top10==1)[,c("year","songtitle")])
+```
+
+
+Problem 1.4:
+```{r,results='asis'}
+tsig = data.frame(sort(table(songs$timesignature)))
+knitr::kable(tsig)
+```
+
+Problem 1.5: The fastest song is: `r songs[which.max(songs$tempo),"songtitle"]`
+
+
+## Creating a Prediction Model
+
+```{r}
+nonvars = c("year", "songtitle", "artistname", "songID", "artistID")
+vars = setdiff(colnames(songs),nonvars)
+
+spl = songs$year <= 2009
+train = subset(songs,spl)[,vars]
+test = subset(songs,!spl)[,vars]
+```
+Problem 2.1: There are `r nrow(train)` songs in the training set.
+
+Problems 2.2-2.5 can be answered from the summary below:
+```{r}
+m1 = glm(Top10~.,data=train,family="binomial")
+summary(m1)
+```
+
+## Beware of Multicolinearity Issues
+
+```{r}
+m2 = glm(Top10~.-loudness,data=train,family="binomial")
+summary(m2)
+```
+
+```{r}
+m3 = glm(Top10~.-energy,data=train,family="binomial")
+summary(m3)
+```
+
+## Validating Our Model
+
+```{r}
+p3 = predict(m3,newdata=test,type="response")
+m3.conf = table(test$Top10,p3>.45)
+m3.acc = (m3.conf[1,1]+m3.conf[2,2])/nrow(test)
+```
+Problem 4.1: accuracy = `r m3.acc`
+
+```{r}
+baseline = table(test$Top10)
+bl.acc = baseline[1]/nrow(test)
+```
+Problem 4.2: baseline accuracy = `r bl.acc`
+
+Problem 4.3:
+```{r,results='asis'}
+knitr::kable(m3.conf)
+```
+
+Problem 4.4:
+```{r}
+tn = m3.conf[1,1]
+tp = m3.conf[2,2]
+fn = m3.conf[2,1]
+fp = m3.conf[1,2]
+sens = tp/(tp+fn)
+spec = tn/(fp+tn)
+acc = (tp+tn)/nrow(test)
+```
+
+---------------|-------------
+true negative  | `r tn`
+true positive  | `r tp`
+false negative | `r fn`
+false positive | `r fp`
+accuracy       | `r acc`
+sensitivity    | `r sens`
+specificity    | `r spec`
+
+
+This model favors specificity over sensitivity. It is a conservative model that will miss many hits, but provides high confidence that selected songs will become hits.
