@@ -1,0 +1,101 @@
+---
+title: "Boston Housing Prices"
+author: "Terrel Shumway"
+date: "04/15/2015"
+output: html_document
+---
+
+This follows the recitation for week 4 of the Analytics Edge course on edx.org.
+Download and read the data.
+
+```{r}
+remote = "https://courses.edx.org/c4x/MITx/15.071x_2/asset/boston.csv"
+local = "boston.csv"
+if(!file.exists(local)){
+  library(downloader)
+  download(remote,local)
+}
+data = read.csv(local)
+```
+
+```{r,echo=FALSE}
+plot(data$LON,data$LAT,xlab="Longitude",ylab="Latitude",main="Boston Census Zones")
+river = subset(data,data$CHAS==1)
+points(river$LON,river$LAT,col="blue",pch=19)
+mit = subset(data,data$TRACT==3531)
+points(mit$LON,mit$LAT,col="red",pch=19)
+poluted = subset(data,data$NOX>median(data$NOX))
+points(poluted$LON,poluted$LAT,col="yellow",pch=8)
+hirent = subset(data,data$MEDV>median(data$MEDV))
+points(hirent$LON,hirent$LAT,col="green",pch=9)
+```
+
+
+## Regression trees
+```{r}
+library(rpart)
+library(rpart.plot)
+rm1 = rpart(MEDV ~ LAT+LON,data=data)
+plot(data$LON,data$LAT,xlab="Longitude",ylab="Latitude",main="Boston Census Zones")
+hirent = subset(data,data$MEDV>median(data$MEDV))
+points(hirent$LON,hirent$LAT,col="green",pch=9)
+p1 = predict(rm1,data=data)
+pv = subset(data,p1>21.2)
+points(pv$LON,pv$LAT,col="blue",pch=7)
+```
+
+```{r}
+rm2 = rpart(MEDV ~ LAT+LON,data=data,minbucket=50)
+plot(data$LON,data$LAT,xlab="Longitude",ylab="Latitude",main="Boston Census Zones")
+hirent = subset(data,data$MEDV>median(data$MEDV))
+points(hirent$LON,hirent$LAT,col="green",pch=9)
+p2 = predict(rm2,data=data)
+pv = subset(data,p2>21.2)
+points(pv$LON,pv$LAT,col="blue",pch=7)
+```
+
+## Split for predictive value
+```{r}
+library(caTools)
+set.seed(123)
+spl = sample.split(data$MEDV,SplitRatio=.7)
+train = subset(data,spl)
+test = subset(data,!spl)
+indvars = setdiff(colnames(data),c("TOWN","TRACT","MEDV"))
+form = formula(paste0("MEDV ~ ",paste0(indvars,collapse=" + ")))
+
+
+rm3 = lm(form,data=train)
+summary(rm3)
+rm3.pred = predict(rm3,newdata=test)
+rm3.sse = sum((rm3.pred-test$MEDV)^2)
+
+rm4 = rpart(form,data=train)
+summary(rm4)
+rm4.pred = predict(rm4,newdata=test)
+rm4.sse = sum((rm4.pred-test$MEDV)^2)
+
+```
+
+## Apply Cross Validation to determine best *cp*
+
+```{r}
+library(caret)
+library(e1071)
+tr.control = trainControl(method="cv",number=10)
+cp.grid = expand.grid(.cp=(0:10)*0.001)
+tr = train(form,data=train,method="rpart",trControl = tr.control,tuneGrid=cp.grid)
+
+rm5 = tr$finalModel
+rm5.pred = predict(rm5,newdata=test)
+rm5.sse = sum((rm5.pred-test$MEDV)^2)
+
+```
+
+# Summary
+
+model   | sse
+--------|-----
+linreg  | `r rm3.sse`
+CART    | `r rm4.sse`
+CART with cross validation | `r rm5.sse`
