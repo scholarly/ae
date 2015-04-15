@@ -1,0 +1,106 @@
+---
+title: "Predictive Coding for Enron"
+author: "Terrel Shumway"
+date: "04/14/2015"
+output: html_document
+---
+
+This follows the steps of the recitation for unit 5.
+
+```{r}
+remote = "https://courses.edx.org/c4x/MITx/15.071x_2/asset/energy_bids.csv"
+local = "enron_emails.csv"
+if(!file.exists(local)){
+  library(downloader)
+  download(remote,local)
+}
+enron = read.csv(local,stringsAsFactors=FALSE)
+summary(enron)
+```
+
+## Prepare the data
+
+build the corpus
+```{r}
+library(tm)
+doclean = function(x){
+  stemDocument(
+    removeWords(
+      removePunctuation(
+        PlainTextDocument(
+          tolower(x))),stopwords("english")))
+}
+corpus = tm_map(Corpus(VectorSource(enron$email)),doclean)
+
+
+```
+
+build the document term matrix, and remove least frequent terms
+```{r}
+dtm = as.data.frame(as.matrix(removeSparseTerms(DocumentTermMatrix(corpus),0.97)))
+```
+
+copy the outcome variable from the original matrix
+```{r}
+dtm$responsive = enron$responsive
+```
+
+
+
+Split into training and testing sets
+
+```{r}
+library(caTools)
+set.seed(144)
+spl = sample.split(dtm$responsive,SplitRatio=.7)
+train = subset(dtm,spl)
+test = subset(dtm,!spl)
+```
+
+## Build the model
+
+```{r}
+library(rpart)
+library(rpart.plot)
+cm = rpart(responsive ~ .,data=train,method="class")
+prp(cm)
+```
+
+## Evaluate the model
+```{r}
+pred = predict(cm,newdata=test)[,2]
+conf = table(test$responsive,pred>=0.5)
+```
+```{r,results='asis',echo=FALSE}
+knitr::kable(conf)
+```
+
+```{r}
+bl.acc = table(test$responsive)[1]/nrow(test)
+
+stats = function(conf){
+  n = sum(conf)
+  tp = conf[2,2]
+  tn = conf[1,1]
+  fp = conf[2,1]
+  fn = conf[1,2]
+  acc = (tp+tn)/n
+  spec = tp/(tp+fn)
+  sens = tn/(tn+fp)
+  c(tp=tp,tn=tn,fp=fp,fn=fn,acc=acc,spec=spec,sens=sens)
+}
+stats(table(test$responsive,pred>=0.82))
+stats(conf)
+stats(table(test$responsive,pred>=0.18))
+```
+
+## ROC Curve
+```{r}
+
+library(ROCR)
+proc = prediction(pred,test$responsive)
+perf = performance(proc,"tpr","fpr")
+plot(perf,colorize=TRUE)
+auc = as.numeric(performance(proc,"auc")@y.values)
+```
+AUC=`r auc`
