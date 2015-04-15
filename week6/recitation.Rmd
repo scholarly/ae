@@ -38,5 +38,36 @@ image(flowerClusters, axes = FALSE)
 # Original image
 image(fmatrix,axes=FALSE,col=grey(seq(0,1,length=256)))
 
+```
+
+```{r}
+hmatrix = load("healthy.csv")
+hvector = as.vector(hmatrix)
+image(hmatrix,axes=FALSE,col=grey(seq(0,1,length=256)))
+
+k = 5
+set.seed(1)
+KMC = kmeans(hvector,centers=k,iter.max=1000)
+
+hclusters = KMC$cluster
+KMC$centers[2]
+dim(hclusters) = dim(hmatrix)
+image(hclusters,axes=FALSE,col=rainbow(k))
+
+```
+
+```{r}
+tmatrix = load("tumor.csv")
+tvector = as.vector(tmatrix)
+image(tmatrix,axes=FALSE,col=grey(seq(0,1,length=256)))
+
+k = 5
+set.seed(1)
+KMC = kmeans(tvector,centers=k,iter.max=1000)
+
+tclusters = KMC$cluster
+KMC$centers[2]
+dim(tclusters) = dim(tmatrix)
+image(tclusters,axes=FALSE,col=rainbow(k))
 
 ```
