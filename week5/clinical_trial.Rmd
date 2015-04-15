@@ -1,0 +1,114 @@
+---
+title: "Automating Reviews in Medicine"
+author: "Terrel Shumway"
+date: "04/13/2015"
+output: html_document
+---
+
+```{r,echo=FALSE}
+
+remote = "https://courses.edx.org/c4x/MITx/15.071x_2/asset/clinical_trial.csv"
+local = "clinical_trial.csv"
+if(!file.exists(local)){
+  library(downloader)
+  download(remote,local)
+}
+CTrial = read.csv(local,stringsAsFactors=F)
+str(CTrial)
+```
+
+You can also embed plots, for example:
+
+```{r}
+CTrial$l1 = nchar(CTrial$abstract)
+table(CTrial$l1)
+
+CTrial$l2 = nchar(CTrial$title)
+table(CTrial$l2)
+CTrial[which.min(CTrial$l2),"title"]
+```
+
+# Problem 2
+
+```{r}
+library(tm)
+library(SnowballC)
+pre.corp = function(text){
+  corpus = Corpus(VectorSource(text))
+  corpus = tm_map(corpus,tolower) 
+  corpus = tm_map(corpus,PlainTextDocument)
+  corpus = tm_map(corpus,removePunctuation) 
+  corpus = tm_map(corpus,removeWords, stopwords("english"))
+  corpus = tm_map(corpus,stemDocument)
+  corpus
+}
+
+corpT = pre.corp(CTrial$title)
+dtmT = as.data.frame(as.matrix(removeSparseTerms(DocumentTermMatrix(corpT),0.95)))
+ncol(dtmT)
+corpA = pre.corp(CTrial$abstract)
+dtmA = as.data.frame(as.matrix(removeSparseTerms(DocumentTermMatrix(corpA),0.95)))
+ncol(dtmA)
+```
+
+
+```{r}
+colnames(dtmT) = paste0("T",colnames(dtmT)) 
+colnames(dtmA) = paste0("A",colnames(dtmA)) 
+dtm = cbind(dtmT,dtmA)
+dtm$trial = CTrial$trial
+```
+
+Problem 3.2: `r ncol(dtm)` columns
+
+## Split into training and testing sets
+
+```{r}
+library(caTools)
+spl = sample.split(dtm$trial,SplitRatio=.7)
+train = subset(dtm,spl)
+test = subset(dtm,!spl)
+```
+
+baseline model
+
+```{r}
+baseline = ifelse(mean(train$trial)<.5,0,1)
+bl.c = table(test$trial)
+bl.acc = bl.c[1+baseline]/nrow(test)
+```
+
+Build a CART model
+
+```{r}
+library(rpart)
+library(rpart.plot)
+
+m1 = rpart(trial~.,data=train,method="class")
+prp(m1)
+```
+
+```{r}
+p1 = predict(m1)
+str(p1)
+max(p1[,2])
+```
+
+
+```{r}
+N = nrow(train)
+m1.pt = predict(m1,type="class")
+m1.ct = table(train$trial,m1.pt)
+m1.acct = (m1.ct[1,1]+m1.ct[2,2])/N
+m1.senst = m1.ct[2,2]/(m1.ct[2,1]+m1.ct[2,2])
+m1.spect = m1.ct[1,1]/(m1.ct[1,1]+m1.ct[1,2])
+```
+
+```{r}
+N = nrow(test)
+m1.p = predict(m1,newdata=test,type="class")
+m1.c = table(test$trial,m1.p)
+m1.acc = (m1.c[1,1]+m1.c[2,2])/N
+m1.sens = m1.c[2,2]/(m1.c[2,1]+m1.c[2,2])
+m1.spec = m1.c[1,1]/(m1.c[1,1]+m1.c[1,2])
+```
