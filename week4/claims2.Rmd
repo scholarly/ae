@@ -1,0 +1,135 @@
+---
+title: "Claims Data"
+author: "Terrel Shumway"
+date: "04/14/2015"
+output: html_document
+---
+
+Download and read the data.
+
+```{r}
+remote = "https://courses.edx.org/c4x/MITx/15.071x_2/asset/ClaimsData.csv.zip"
+zip = "ClaimsData.csv.zip"
+local = "ClaimsData.csv"
+if(!file.exists(zip)){
+  library(downloader)
+  download(remote,zip)
+}
+data = read.csv(unz(zip,local))
+str(data)
+```
+
+Here is a plot of the proportion of patients in each cost bucket:
+
+```{r, echo=FALSE}
+barplot(table(data$bucket2008)/nrow(data))
+```
+
+```{r}
+library(caTools)
+set.seed(88)
+spl = sample.split(data$bucket2009,SplitRatio=0.6)
+train = subset(data,spl)
+test = subset(data,!spl)
+```
+In the training set, there are `r nrow(train)` patients. The average age of these patients is `r format(mean(train$age),digits=3)`. `r format(mean(train$diabetes)*100,digits=3)`% of these have a diabetes diagnosis.
+
+## Create and Evaluate Baseline Models
+
+We first establish our criteria for evaluating a predictive model: we want to maximize the accuracy and minimize the penalty. We define appropriate functions of the confusion matrix to calculate these values.
+
+```{r}
+compute.accuracy = function(conf){
+  # sum of the diagonal (correct answers) / sum of all possible answers
+  sum(sapply(1:ncol(conf),function(j){conf[j,j]}))/sum(conf)
+  
+  # could also be defined as the "penalty" with an identity penalty matrix
+}
+
+# it is twice as costly to underestimate as to overestimate
+PenaltyMatrix = matrix(c(0,1,2,3,4,
+                         2,0,1,2,3,
+                         4,2,0,1,2,
+                         6,4,2,0,1,
+                         8,6,4,2,0),
+                       byrow=TRUE,nrow=5)
+
+compute.penalty = function(conf){
+  sum(as.matrix(conf)*PenaltyMatrix)/sum(conf)
+}
+```
+
+The dumb baseline puts everyone in bucket 1 (the most frequent bucket). A smarter baseline uses the same bucket for 2009 as for 2008.
+
+```{r}
+
+bl.dumb = function(data){
+  # put everybody in the first bucket
+  tt = table(data$bucket2009)
+  k = nrow(tt)
+  conf = cbind(tt,matrix(rep(0,k*(k-1)),nrow=k))
+  colnames(conf)=rownames(conf)
+  conf
+}
+
+bl.smart = function(data){
+  # assume that the new year will look like the old year
+  table(data$bucket2009,data$bucket2008)
+}
+
+dumb_baseline = bl.dumb(test)
+smart_baseline = bl.smart(test)
+
+db.acc = compute.accuracy(dumb_baseline)
+sb.acc = compute.accuracy(smart_baseline)
+
+db.pen = compute.penalty(dumb_baseline)
+sb.pen = compute.penalty(smart_baseline)
+
+```
+
+The accuracy of the smart baseline (`r sb.acc`) is only a little better than that of the dumb baseline (`r db.acc`), but has a much lower penalty (`r sb.pen` vs. `r db.pen`).
+
+## Build a CART Model
+```{r}
+library(rpart)
+#library(rpart.plot)
+mform = bucket2009 ~ age + alzheimers + arthritis + cancer + copd + depression + diabetes + heart.failure + ihd + kidney + osteoporosis + stroke + reimbursement2008 + bucket2008
+cm1 = rpart(mform,data=train,method="class",cp=0.00005)
+```
+
+Now make predictions.
+
+```{r}
+p1 = predict(cm1,newdata=test,type="class")
+cm1.conf = table(test$bucket2009,p1)
+cm1.acc = compute.accuracy(cm1.conf)
+cm1.pen = compute.penalty(cm1.conf)
+```
+accuracy: `r cm1.acc` penalty: `r cm1.pen`
+
+
+## Build a CART Model with the PenaltyMatrix
+```{r}
+cm2 = rpart(mform,data=train,method="class",cp=0.00005,
+            parms=list(loss=PenaltyMatrix))
+```
+
+Now make predictions.
+
+```{r}
+p2 = predict(cm2,newdata=test,type="class")
+cm2.conf = table(test$bucket2009,p2)
+cm2.acc = compute.accuracy(cm2.conf)
+cm2.pen = compute.penalty(cm2.conf)
+```
+accuracy: `r cm2.acc` penalty: `r cm2.pen`
+
+# Summary
+
+model          | accuracy    | penalty
+---------------|-------------|-----------
+dumb baseline  | `r db.acc`  | `r db.pen`
+smart baseline | `r sb.acc`  | `r sb.pen`
+naive cart     | `r cm1.acc` | `r cm1.pen`
+cart with loss | `r cm2.acc` | `r cm2.pen`
