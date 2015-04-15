@@ -1,0 +1,42 @@
+---
+title: "Unit6 Recitation"
+author: "Terrel Shumway"
+date: "04/15/2015"
+output: html_document
+---
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r}
+baseurl = "https://courses.edx.org/c4x/MITx/15.071x_2/asset/"
+
+load = function(local){
+  if(!file.exists(local)){
+    library(downloader)
+    remote = paste0(baseurl,local)
+    download(remote,local)
+  }
+  as.matrix(read.csv(local,header=FALSE))
+}
+fmatrix = load("flower.csv")
+fvector = as.vector(fmatrix)
+distances = dist(fvector,method="euclidean")
+
+clusterIntensity = hclust(distances,method="ward.D")
+
+plot(clusterIntensity)
+rect.hclust(clusterIntensity, k = 3, border = "red")
+flowerClusters = cutree(clusterIntensity, k = 3)
+
+
+# Plot the image and the clusters
+dim(flowerClusters) = c(50,50)
+image(flowerClusters, axes = FALSE)
+
+# Original image
+image(fmatrix,axes=FALSE,col=grey(seq(0,1,length=256)))
+
+
+```
