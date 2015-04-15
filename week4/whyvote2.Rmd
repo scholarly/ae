@@ -1,0 +1,87 @@
+---
+title: "Why People Vote"
+author: "Terrel Shumway"
+date: "04/14/2015"
+output: html_document
+---
+
+## Load the Data
+
+```{r}
+
+remote = "https://courses.edx.org/c4x/MITx/15.071x_2/asset/gerber.csv"
+local = "gerber.csv"
+if(!file.exists(local)){
+  library(downloader)
+  download(remote,local)
+}
+gerber = read.csv(local)
+```
+
+## Exploring the Data with Logistic Regression
+Problem 1.1: `r mean(gerber[,"voting"])`
+
+Problem 1.2:
+```{r}
+tapply(gerber$voting, gerber$civicduty, mean)
+
+tapply(gerber$voting, gerber$hawthorne, mean)
+
+tapply(gerber$voting, gerber$self, mean)
+
+tapply(gerber$voting, gerber$neighbors, mean)
+
+```
+
+Problem 1.3:
+```{r}
+m1=glm(voting~civicduty+hawthorne+self+neighbors,data=gerber,family="binomial")
+summary(m1)
+```
+
+Problem 1.4:
+```{r}
+p1 = predict(m1,type="response")
+conf = table(gerber$voting,p1>0.3)
+conf
+```
+
+Problem 1.5:
+```{r}
+tp = conf[2,2]
+tn = conf[1,1]
+acc = (tp+tn)/nrow(gerber)
+```
+accuracy = `r acc`
+
+Problem 1.6:
+```{r,results='hide'}
+library(ROCR)
+pred = prediction(p1,gerber$voting)
+auc = as.numeric(performance(pred,"auc")@y.values)
+```
+AUC = `r auc`
+
+## Building a CART Model
+Problem 2.1:
+```{r}
+library(rpart)
+library(rpart.plot)
+
+m2=rpart(voting~civicduty+hawthorne+self+neighbors,data=gerber)
+prp(m2)
+```
+
+Problem 2.2,2.3:
+```{r}
+m3=rpart(voting~civicduty+hawthorne+self+neighbors,data=gerber,cp=0.0)
+prp(m3)
+```
+
+Problem 2.4:
+```{r}
+m4=rpart(voting~sex+civicduty+hawthorne+self+neighbors,data=gerber,cp=0.0)
+prp(m4)
+```
+
+## Interaction of Terms
