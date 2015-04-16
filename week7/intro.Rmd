@@ -1,0 +1,34 @@
+---
+title: "Introduction to Visualization"
+author: "Terrel Shumway"
+date: "Thursday, April 16, 2015"
+output: html_document
+---
+
+This document follows the first lecture series of unit 7.
+
+```{r}
+library(ggplot2)
+
+baseurl = "https://courses.edx.org/c4x/MITx/15.071x_2/asset/"
+
+getdata = function(local){
+  if(!file.exists(local)){
+    library(downloader)
+    remote = paste0(baseurl,local)
+    download(remote,local)
+  }
+  read.csv(local,stringsAsFactors=FALSE)
+}
+who = getdata("WHO.csv")
+
+
+```
+
+You can also embed plots, for example:
+
+```{r, echo=FALSE}
+sp = ggplot(who,aes(x=GNI,y=FertilityRate))
+
+```
+

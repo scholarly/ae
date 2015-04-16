@@ -1,0 +1,29 @@
+---
+title: "Market Segmentation for Airlines"
+author: "Terrel Shumway"
+date: "Thursday, April 16, 2015"
+output: html_document
+---
+
+This presents the answers for questions in part two of assignment 6.
+
+
+```{r}
+baseurl = "https://courses.edx.org/c4x/MITx/15.071x_2/asset/"
+
+getdata = function(local){
+  if(!file.exists(local)){
+    library(downloader)
+    remote = paste0(baseurl,local)
+    download(remote,local)
+  }
+  read.csv(local,stringsAsFactors=FALSE)
+}
+data = getdata("AirlinesCluster.csv")
+str(data)
+```
+
+```{r}
+sort(sapply(data,mean))
+```
+
