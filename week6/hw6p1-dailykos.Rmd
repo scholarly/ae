@@ -47,9 +47,7 @@ table(groups)
 ```
 problem 1.5,1.6
 ```{r}
-lapply(1:k,function(g){
-  tail(sort(colMeans(data[groups==g,])))
-})
+lapply(1:k,function(g){head(sort(colMeans(data[groups==g,]),decreasing=TRUE))})
 ```
 
 ## K-means Clustering
@@ -58,9 +56,23 @@ lapply(1:k,function(g){
 set.seed(1000)
 kluster = kmeans(data,k)
 str(kluster)
+```
+
+problem 2.1
+```{r}
 kluster$size[3]
 which.max(kluster$size)
 which.min(kluster$size)
+```
+
+problem 2.2
+```{r}
 kmc=kluster$centers
+lapply(1:k,function(g){head(sort(kmc[g,],decreasing=TRUE))})
+```
+
+## Comparing
+```{r}
+table(groups,kluster$cluster)
 ```
 

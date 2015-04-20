@@ -23,7 +23,58 @@ data = getdata("AirlinesCluster.csv")
 str(data)
 ```
 
+problem 1.1
+```{r,results='asis'}
+knitr::kable(sort(sapply(data,mean)))
+```
+
+problem 1.3
 ```{r}
-sort(sapply(data,mean))
+library(caret)
+preproc = preProcess(data)
+datan = predict(preproc,data)
+knitr::kable(summary(datan))
+```
+
+problem 2.1
+```{r}
+storage = "aircluster.RData.xz"
+if(file.exists(storage)){
+  load(storage)  
+}else{
+  distances = dist(datan,method="euclidean")  
+  cluster = hclust(distances,method="ward.D")
+  save(distances,cluster,file=storage,compress="xz")
+}
+
+plot(cluster)
+k = 5
+rect.hclust(cluster,k)
+```
+
+problem 2.2
+```{r}
+groups = cutree(cluster,k)
+table(groups)
+```
+
+problem 2.3-7
+```{r,results='asis'}
+#sapply(1:k,function(g){colMeans(data[groups==g,])})
+kdatn = sapply(split(datan,groups),colMeans)
+barplot(kdatn,beside=TRUE,legend.text=TRUE)
+kdat = sapply(split(data,groups),colMeans)
+knitr::kable(kdat)
+# TODO: learn how to visualize this. Reading the table is tedious. DONE: good enough for now
+# TODO: learn how to control the size and shape of plots/images in knitr output
+```
+
+
+problem 3.1
+```{r}
+set.seed(88)
+kluster = kmeans(datan,k,iter.max=1000)
+#str(kluster)
+kluster$size>1000
 ```
 
