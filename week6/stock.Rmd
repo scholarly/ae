@@ -4,7 +4,7 @@ author: "Terrel Shumway"
 date: "04/20/2015"
 output: html_document
 ---
-
+  
 This presents the answers for questions in part two of assignment 6.
 
 ```{r}
@@ -48,26 +48,43 @@ barplot(colMeans(data[,indep]))
 library(caTools)
 set.seed(144)
 spl = sample.split(data$PositiveDec,SplitRatio=0.7)
-train = data[spl,]
-test = data[!spl,]
+train = subset(data,spl==TRUE)
+test = subset(data,spl!=TRUE)
 
-accuracy = function(c){(c[1,1]+c[2,2])/sum(c)}
+mystats = function(conf){
+  n = sum(conf)
+  tp = conf[2,2]
+  tn = conf[1,1]
+  fp = conf[2,1]
+  fn = conf[1,2]
+  acc = (tp+tn)/n
+  spec = tp/(tp+fn)
+  sens = tn/(tn+fp)
+  c(tp=tp,tn=tn,fp=fp,fn=fn,acc=acc,spec=spec,sens=sens)
+}
+
+confacc = function(model,data,level=0.5,depvar="PositiveDec"){
+  pred = predict(model,newdata=data,method="response")
+  conf = table(data[,depvar],pred>level)
+  #acc = (conf[1,1]+conf[2,2])/nrow(data)
+  print(conf)
+  mystats(conf)
+}
 
 
-m1 = glm(PositiveDec ~ ., data=train,family="binomial")
+m1 = glm(PositiveDec ~ ., data=train, family="binomial")
 summary(m1)
-m1.pred = predict(m1,newdata=train,method="response")
-m1.conf = table(train$PositiveDec,m1.pred>0.5)
-m1.acc = accuracy(m1.conf)
+
+pred = predict(m1,method="response")
+conf = table(train$PositiveDec,pred>0.5)
+
+m1.acc = mystats(conf)
 
 ```
 problem 2.1: accuracy=`r m1.acc`
 
 ```{r}
-m1.pred = predict(m1,newdata=test,method="response")
-m1.conf = table(test$PositiveDec,m1.pred>0.5)
-m1.acc = accuracy(m1.conf)
-
+m1.acc = confacc(m1,test)
 ```
 problem 2.2: accuracy=`r m1.acc`
 
@@ -114,9 +131,33 @@ if(file.exists(storage)){
 
 ctrain = predict(km.kcca)
 ctest = predict(km.kcca,newdata=ntest)
+```
 
+problem 4.1
+```{r}
 table(ctest)
 ```
 
+problem 4.2
 
+```{r}
+
+sm1 = glm(PositiveDec ~ ., data=train[ctrain==1,],family="binomial")
+summary(sm1)
+sm2 = glm(PositiveDec ~ ., data=train[ctrain==2,],family="binomial")
+summary(sm2)
+sm3 = glm(PositiveDec ~ ., data=train[ctrain==3,],family="binomial")
+summary(sm3)
+names(sm3)
+signs = cbind(s1=sign(sm1$coefficients),s2 = sign(sm2$coefficients),s3 = sign(sm3$coefficients))
+signs
+```
+
+
+```{r}
+ac1 = confacc(sm1,test[ctrain==1,])
+ac2 = confacc(sm2,test[ctrain==2,])
+ac3 = confacc(sm3,test[ctrain==3,])
+c(ac1,ac2,ac3)
+```
 
