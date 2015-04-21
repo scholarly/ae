@@ -28,7 +28,15 @@ who = getdata("WHO.csv")
 You can also embed plots, for example:
 
 ```{r, echo=FALSE}
-sp = ggplot(who,aes(x=GNI,y=FertilityRate))
+plot(who$GNI, who$FertilityRate)
 
+sp = ggplot(who,aes(x=GNI,y=FertilityRate,color=Region))
+sp + geom_point()
+#sp + geom_line() # not a good visualization for this data set
+plot1 = sp + geom_point(colour = "blue", size = 2, shape = 17) + ggtitle("Fertility Rate vs. Gross National Income")
+print(plot1)
+plot2 = ggplot(who,aes(x=GNI,y=LiteracyRate))
+plot2 = plot2 + geom_point() + ggtitle("Literacy Rate vs. Gross National Income")
+print(plot2)
 ```
 

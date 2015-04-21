@@ -1,0 +1,31 @@
+---
+title: "The Analytical Policeman"
+author: "Terrel Shumway"
+date: "Thursday, April 16, 2015"
+output: html_document
+---
+
+This document follows the second lecture series of unit 7.
+
+```{r}
+
+baseurl = "https://courses.edx.org/c4x/MITx/15.071x_2/asset/"
+
+getdata = function(local){
+  if(!file.exists(local)){
+    library(downloader)
+    remote = paste0(baseurl,local)
+    download(remote,local)
+  }
+  data = read.csv(local,stringsAsFactors=FALSE)
+}
+
+extract_features = function(data){
+  data$Date = strptime(data$Date, format="%m/%d/%y %H:%M")
+  data$Weekday = weekdays(data$Date)
+  data$Hour = data$Date$hour
+  data
+}
+mvt = extract_featurs(getdata("mvt.csv"))
+str(mvt)
+```
