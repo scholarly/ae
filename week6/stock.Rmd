@@ -72,7 +72,7 @@ confacc = function(model,data,level=0.5,depvar="PositiveDec"){
 }
 
 
-m1 = glm(PositiveDec ~ ., data=train, family="binomial")
+m1 = glm(PositiveDec ~ ., data=train, family=binomial)
 summary(m1)
 
 pred = predict(m1,method="response")
