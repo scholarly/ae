@@ -1,0 +1,104 @@
+---
+title: "Parole Visualization"
+author: "Terrel Shumway"
+date: "04/24/2015"
+output: html_document
+---
+
+This document provides answers to homework 7 part 4.
+
+
+```{r}
+
+library(NLP)
+library(tm)
+library(SnowballC)
+library(Cairo)
+library(RColorBrewer)
+library(wordcloud)
+
+
+baseurl = "https://courses.edx.org/c4x/MITx/15.071x_2/asset/"
+
+getdata = function(local){
+  if(!file.exists(local)){
+    library(downloader)
+    remote = paste0(baseurl,local)
+    download(remote,local)
+  }
+  data = read.csv(local,stringsAsFactors=F)
+  data$male = as.factor(data$male)
+  data$state = as.factor(data$state)
+  data$crime = as.factor(data$crime)
+  data
+}
+
+data = getdata("parole.csv")
+fv = table(data$male,data$violator)
+fv = fv[1,2]/sum(fv[,2])
+```
+
+Problem 1.1: proportion of violator who are female: `r fv`
+
+Problem 1.2
+```{r}
+table(data[data$state==2,"crime"])
+```
+
+Problem 2.1
+```{r}
+library(ggplot2)
+gp = ggplot(data=data,aes(x=age))
+
+gph = gp + geom_histogram(binwidth=5)
+gph
+
+# 2.2
+gp + geom_histogram(binwidth=5,color="blue")
+
+# 3.1
+gpb = gp + geom_histogram(binwidth=5,fill="blue") 
+gpb + facet_grid(male~.)
+
+# 3.2
+gpb + facet_grid(.~male)
+
+# 3.3
+colorPalette = c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+gpc = ggplot(data=data,aes(x=age, fill=male)) +
+  scale_fill_manual(values=colorPalette)
+gpc + geom_histogram(binwidth=5) 
+
+#3.4
+gpc + geom_histogram(binwidth=5,position="identity",alpha=0.5)
+
+```
+
+```{r}
+# 4.1
+gpt = ggplot(data=data,aes(x=time.served, fill=male)) +
+  scale_fill_manual(values=colorPalette)
+gpt + geom_histogram(binwidth=1) 
+
+# 4.2
+gpt + geom_histogram(binwidth=.1)
+
+# 4.3
+gpt + geom_histogram(binwidth=1) + facet_grid(.~crime~state)
+
+
+gptc = ggplot(data=data,aes(x=time.served, fill=state)) +
+  scale_fill_manual(values=colorPalette) 
+
+# 4.4 Yuck!
+gptc + geom_histogram(binwidth=1,position="identity",alpha=0.5) 
+```
+
+```{r}
+
+gptc + geom_histogram(binwidth=1,position="dodge") 
+
+```
+
+
