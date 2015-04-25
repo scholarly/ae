@@ -27,14 +27,18 @@ getdata = function(local){
     download(remote,local)
   }
   data = read.csv(local,stringsAsFactors=F)
-  data$male = as.factor(data$male)
+  data$gender = as.factor(data$male)
+  levels(data$gender)=c("female","male")
+  data$male = NULL
   data$state = as.factor(data$state)
+  levels(data$state)=c("other","Kentucky","Louisiana","Virginia")
   data$crime = as.factor(data$crime)
+  levels(data$crime)=c("larceny","drug","driving","other")
   data
 }
 
 data = getdata("parole.csv")
-fv = table(data$male,data$violator)
+fv = table(data$gender,data$violator)
 fv = fv[1,2]/sum(fv[,2])
 ```
 
@@ -58,15 +62,15 @@ gp + geom_histogram(binwidth=5,color="blue")
 
 # 3.1
 gpb = gp + geom_histogram(binwidth=5,fill="blue") 
-gpb + facet_grid(male~.)
+gpb + facet_grid(gender~.)
 
 # 3.2
-gpb + facet_grid(.~male)
+gpb + facet_grid(.~gender)
 
 # 3.3
 colorPalette = c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
 
-gpc = ggplot(data=data,aes(x=age, fill=male)) +
+gpc = ggplot(data=data,aes(x=age, fill=gender)) +
   scale_fill_manual(values=colorPalette)
 gpc + geom_histogram(binwidth=5) 
 
@@ -77,7 +81,7 @@ gpc + geom_histogram(binwidth=5,position="identity",alpha=0.5)
 
 ```{r}
 # 4.1
-gpt = ggplot(data=data,aes(x=time.served, fill=male)) +
+gpt = ggplot(data=data,aes(x=time.served, fill=gender)) +
   scale_fill_manual(values=colorPalette)
 gpt + geom_histogram(binwidth=1) 
 
