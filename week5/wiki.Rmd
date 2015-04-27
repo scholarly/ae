@@ -1,11 +1,15 @@
 ---
-title: "Wikipedia Vandalism"
+title: "Detecting Vandalism on Wikipedia"
 author: "Terrel Shumway"
 date: "04/11/2015"
 output: html_document
 ---
 
+This document presents answers for homework 5 part 1.
+
 First, we download and read the file `wiki.csv`...
+
+## Bag of Words
 
 ```{r,echo=FALSE}
 
@@ -18,11 +22,9 @@ wiki = read.csv(local,stringsAsFactors=F)
 str(wiki)
 ```
 
-## Problem 1.1
+
 Problem 1.1: There are `r sum(wiki$Vandal)` vandalism cases in the dataset.
 
-
-## Problem 1.2: Bag of Words
 
 ```{r}
 library(tm)
@@ -68,14 +70,14 @@ colnames(wordsRemoved) = paste("R",colnames(wordsRemoved))
 
 Problem 1.4: There are `r ncol(sparse)` terms in the pruned matrix
 
-## Combine the bags
+Combine the bags
 
 ```{r}
 wikiWords = cbind(wordsAdded,wordsRemoved)
 wikiWords$Vandal = wiki$Vandal
 ```
 
-## Split into train and test sets
+Split into train and test sets
 
 ```{r}
 library(caTools)
@@ -92,8 +94,6 @@ bl.acc = bl.c[1]/N
 ```
 
 Problem 1.5: The baseline model has accuracy `r bl.acc`.
-
-## Build a CART model
 
 ```{r}
 
