@@ -1,0 +1,62 @@
+---
+title: "Confusion Matrix"
+author: "Terrel Shumway"
+date: "04/14/2015"
+output: html_document
+---
+
+I want to remember how to calculate accuracy, specificity, and sensitivity from a confusion matrix.
+
+
+Load the data.
+```{r}
+data(mtcars)
+mtcars
+```
+
+
+Split the data.
+
+```{r}
+library(caTools)
+set.seed(42)
+spl = sample.split(mtcars$mpg,SplitRatio=.7)
+train = subset(mtcars,spl)
+test = subset(mtcars,!spl)
+```
+
+Build the model.
+
+```{r}
+
+m1 = glm(mpg ~ ., data=train)
+summary(m1)
+```
+
+Test its accuracy.
+
+```{r}
+p1 = predict(m1,newdata=test)
+conf = table(test$mpg,p1)
+```
+
+```{r,echo=FALSE,results='asis'}
+knitr::kable(conf)
+```
+
+There is one row for each true value, and one column for each prediction
+
+```{r}
+accuracy = (conf[1,1]+conf[2,2])/nrow(test)
+conf[1,]
+conf[2,]
+conf[3,]
+specificity = conf[2,2]/sum(conf[2,])
+sensitivity = conf[1,1]/sum(conf[1,])
+```
+           
+-----------|-----------
+Accuracy   |`r accuracy`
+Sensitivity|`r sensitivity`
+Specificity|`r specificity`
+
